@@ -10,3 +10,4 @@ class User (AbstractUser):
         business = 'business', 'business'
 
     type = models.CharField(max_length=20, choices=UserType.choices, default=UserType.customer)
+    created_at = models.DateTimeField(auto_now_add=True)
