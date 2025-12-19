@@ -47,3 +47,47 @@ class DetailProfileSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+class BusinessProfileSeralizer(serializers.ModelSerializer):
+
+    user = serializers.SerializerMethodField()
+    type = serializers.CharField(source='user.type', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ['user', 'username', 'first_name', 'last_name', 'file', 'location', 'tel', 'description', 'working_hours', 'type']
+
+    def get_user(self, obj):
+        return obj.user.id
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('file'):
+            data['file'] = ""
+        return data
+
+
+class CustomerProfileSeralizer(serializers.ModelSerializer):
+
+    user = serializers.SerializerMethodField()
+    type = serializers.CharField(source='user.type', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ['user', 'username', 'first_name', 'last_name', 'file', 'location', 'tel', 'description', 'working_hours', 'type']
+
+    def get_user(self, obj):
+        return obj.user.id
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('file'):
+            data['file'] = ""
+        return data
+
+
+    
+   
+
