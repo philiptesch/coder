@@ -88,6 +88,14 @@ class CustomerProfileSeralizer(serializers.ModelSerializer):
         return data
 
 
+class UserDetailsSerializer(serializers.ModelSerializer):
+
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = ['first_name', 'last_name','username', ]
+
     
    
 

@@ -8,7 +8,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class offers(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
-    image = models.FileField(upload_to='offers/', default=True)
+    image = models.FileField(upload_to='offers/', default=True, null=True,)
     description = models.TextField()
     createad_at = models.DateTimeField(auto_now_add=True)
     uploaded_at = models.DateTimeField(auto_now=True)
@@ -16,11 +16,7 @@ class offers(models.Model):
         return self.title
     
 
-class Feature(models.Model):
-    name = models.CharField(max_length=100)
 
-    def __str__(self):
-        return self.name
     
 
 class OfferDetails(models.Model):
@@ -32,12 +28,12 @@ class OfferDetails(models.Model):
         premium = 'premium', 'premium'
 
 
-    offer = models.ForeignKey(offers, on_delete=models.CASCADE)
-    revision = models.PositiveIntegerField()
+    offer = models.ForeignKey(offers, on_delete=models.CASCADE, related_name='details')
+    revisions = models.PositiveIntegerField()
     title = models.CharField(max_length=200)
     delivery_time = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    features = models.ManyToManyField('Feature', blank=True)
+    features = models.JSONField()
     offer_type = models.CharField(max_length=20, choices=OfferTyp.choices, default=OfferTyp.basic)
     def __str__(self):
         return self.title
