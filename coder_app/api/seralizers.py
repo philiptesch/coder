@@ -66,12 +66,20 @@ class OfferCreateSeralizer(serializers.ModelSerializer):
     def create(self, validated_data):
  
         details_data = validated_data.pop('details', [])
-        offer = offers.objects.create(**validated_data)
+        user = self.context['request'].user
+        offer = offers.objects.create(**validated_data, user=user)
+        print("OFFER CREATED:", offer)
+    
         for detail_data in details_data:
-            OfferDetails.objects.create(
-                offer=offer,
-                **detail_data
-            )
+            features = detail_data.get('features', [])
+
+            for feature in features:
+                if isinstance(feature, int):
+                    raise serializers.ValidationError(
+                        {"error": "Features dürfen keine Zahlen enthalten"}
+                    )
+            OfferDetails.objects.create(offer=offer, **detail_data)
+
 
         return offer
 

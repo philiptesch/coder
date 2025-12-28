@@ -11,49 +11,65 @@ from .permission import IsBusinessUser, IsOwnerFromOfffer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
-from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView, ListCreateAPIView
 from django.shortcuts import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import FilterSet, NumberFilter, DjangoFilterBackend
+from rest_framework import filters
+from django.db.models import Min, Max
+from rest_framework.exceptions import PermissionDenied, ValidationError
+class OfferListPaginatuion(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
-class OfferListView(APIView):
+class OfferFilterSet(FilterSet):
+
+    creator_id = NumberFilter(field_name='user__id', lookup_expr='exact')
+
+    class Meta:
+        model = offers
+        fields = ['creator_id']
+
+
+class OfferListView(ListCreateAPIView):
     permission_classes = [IsBusinessUser, IsAuthenticated]
-
-    def get(self, request, format=None):
-        offers_queryset = offers.objects.all()
-        serializer = OfferSeralizer(offers_queryset, many=True, context={'request': request})
-        return Response(serializer.data)
-    
-
-    def post(self, request, format=None):
-        serializer = OfferCreateSeralizer(data=request.data, context={'request': request})
-
-        if not request.user.is_authenticated: 
-            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        if request.user.type != 'business':
-            return Response({'detail': 'Only business users can create offers.'}, status=status.HTTP_403_FORBIDDEN)
-        
-        details = request.data.get('details', [])  # Immer request.data benutzen
-
-        for detail in details:
-            features = detail.get('features', [])
-    
-    # Prüfen, dass alle Features Strings sind
-        for feature in features:
-            if isinstance(feature, int):
-                return Response(
-                {"error": "Features dürfen keine Zahlen enthalten"},
-                status=400
-            )
-    
-        print("Features:", features)
+    pagination_class = OfferListPaginatuion
+    queryset = offers.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = OfferFilterSet
+    search_fields = ['title', 'description']
+    ordering_fields = ['updated_at', 'min_price']
 
 
-        if serializer.is_valid():
-            serializer.save(user=request.user)
-            print("OFFER CREATED:", serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return OfferCreateSeralizer
+        return OfferSeralizer
+
+    def get_queryset(self):
+        queryset= offers.objects.all()
+
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        min_price = self.request.query_params.get('min_price')
+
+        queryset = queryset.annotate(max_delivery_time=Max('details__delivery_time'), min_price=Min('details__price'))
+
+        if max_delivery_time is not None:
+            try:
+                max_delivery_time = int(max_delivery_time)
+            except ValueError:
+                raise ValidationError("max_delivery_time must be an integer.")
+            queryset = queryset.filter(max_delivery_time__lte=max_delivery_time)
+
+        if min_price is not None:
+            try:
+                 min_price = float(min_price.replace(',', '.'))
+            except ValueError:
+                raise ValidationError({"min_price": "Must be a number."})
+            queryset = queryset.filter(min_price__gte=min_price)
+
+        return queryset
 
 class OfferDetailView(RetrieveUpdateDestroyAPIView):
     queryset = offers.objects.all()
@@ -75,3 +91,4 @@ class OfferDetailRetrieveView(RetrieveAPIView):
     queryset = OfferDetails.objects.all()
     serializer_class = OfferDetailRetrieveSeralizer
     permission_classes = [AllowAny]
+
