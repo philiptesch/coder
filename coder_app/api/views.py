@@ -3,15 +3,15 @@ from urllib import request
 from rest_framework import generics 
 from profile_app.models import Profile
 from auth_app.models import User
-from coder_app.models import offers, OfferDetails
+from coder_app.models import offers, OfferDetails, Orders
 from rest_framework.views import APIView
-from .seralizers  import OfferSeralizer, DetailOfferSeralizer, OfferCreateSeralizer, OfferDetailSeralizer, OfferDetailRetrieveSeralizer, OfferDetailUpdateSeralizer
+from .seralizers  import OfferSeralizer,OfferCreateSeralizer, OfferDetailSeralizer, OfferDetailRetrieveSeralizer, OfferDetailUpdateSeralizer, OrdersSerializer, OrderDetailSerializer, OrderCountSeralizer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .permission import IsBusinessUser, IsOwnerFromOfffer
+from .permission import IsBusinessUser, IsOwnerFromOfffer, IsCustomerUser, IsBusinessAndAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
-from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView, ListCreateAPIView
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView, ListCreateAPIView,ListAPIView
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import FilterSet, NumberFilter, DjangoFilterBackend
@@ -92,3 +92,59 @@ class OfferDetailRetrieveView(RetrieveAPIView):
     serializer_class = OfferDetailRetrieveSeralizer
     permission_classes = [AllowAny]
 
+
+
+class OrderListCreateView(APIView):
+    permission_classes = [IsCustomerUser, IsAuthenticated]
+    queryset = Orders.objects.all()
+    
+
+    def get(self, request):
+       
+        orders = Orders.objects.filter(customer_user=request.user) | Orders.objects.filter(business_user=request.user)
+        serializer = OrdersSerializer(orders, many=True)
+
+        return Response(serializer.data)
+    
+
+    def post(self, request):
+        
+        offer_detail_id = request.data.get('offer_detail_id')
+        if not OfferDetails.objects.filter(id=offer_detail_id).exists():
+            return Response({"error": "The specified offer details could not be found."}, status=404)
+        
+        
+        serializer = OrdersSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class OrderDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = Orders.objects.all()
+    serializer_class = OrderDetailSerializer
+    permission_classes = [IsBusinessAndAdminUser, IsAuthenticated]
+
+class OrderBusinessCountViewInProgress(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, business_user_id):
+        business_user = get_object_or_404(User, id=business_user_id, type='business')
+        user = request.user
+        if user.id != business_user.id:
+            return Response({"order_count": 0})
+
+        count = Orders.objects.filter(business_user=user, status="in_progress").count()
+        return Response({"order_count": count})
+    
+class OrderBusinessCountViewCompleted(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, business_user_id):
+        business_user = get_object_or_404(User, id=business_user_id, type='business')
+        user = request.user
+        if user.id != business_user.id:
+            return Response({"order_count": 0})
+
+        count = Orders.objects.filter(business_user=user, status="completed").count()
+        return Response({"order_count": count})

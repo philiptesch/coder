@@ -47,7 +47,7 @@ class Orders(models.Model):
 
     customer_user = models.ForeignKey(User, related_name='customer_orders', on_delete=models.CASCADE)
     business_user = models.ForeignKey(User, related_name='business_orders', on_delete=models.CASCADE)
-    offer_detail = models.ForeignKey(OfferDetails, on_delete=models.CASCADE)
+    offer_detail = models.ForeignKey(OfferDetails, related_name='details', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     uploaded_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.in_progress)
