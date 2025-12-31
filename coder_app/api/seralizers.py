@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from profile_app.models import Profile
 from auth_app.models import User
-from coder_app.models import offers, OfferDetails, Orders
+from coder_app.models import offers, OfferDetails, Orders, Review
 from django.db.models import Min, Max, Avg, Sum, Count
 from profile_app.api.serializers import UserDetailsSerializer
 
@@ -247,16 +247,36 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-class OrderCountSeralizer(serializers.ModelSerializer):
+class ReviewListSeralizer(serializers.ModelSerializer):
 
-    order_count = serializers.SerializerMethodField()
+    id = serializers.IntegerField(read_only=True)
+    rating = serializers.FloatField(source='rate')
+
 
     class Meta:
-        model = Orders
-        fields = ['order_count']
+        model = Review
+        fields = [
+            'id', 'business_user', 'reviewer',
+            'rating', 'description', 'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'reviewer',
+            'created_at', 'updated_at']
 
-    def get_order_count(self, obj):
-      user = self.context['request'].user
-      if obj.business_user != user:
-        return 0  
-      return Orders.objects.filter(business_user=user, status="in_progress").count()
+    def create(self, validated_data):
+            user = self.context['request'].user
+            business_user = validated_data.get('business_user')
+            print(business_user)
+            print(user)
+            if user.type != 'customer':
+                raise serializers.ValidationError("Only customers are allowed to create reviews.")
+
+            if Review.objects.filter(reviewer=user,business_user=business_user).exists():
+                raise serializers.ValidationError("You have already reviewed this business.")
+            
+            if business_user.type != 'business':
+                raise serializers.ValidationError("You can only review business users.")
+            
+            review = Review.objects.create(reviewer=user, **validated_data)
+            return review

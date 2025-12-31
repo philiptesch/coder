@@ -31,7 +31,19 @@ class IsBusinessAndAdminUser(BasePermission):
             return(request.user and request.user.is_authenticated and request.user.type == 'business')
 
 
+class IsCustomerUserForReviews(BasePermission):
 
+        def has_permission(self, request, view):
+             if request.user.is_authenticated:
+                return True
+             
+        def has_object_permission(self, request, view, obj):
+            
+            if request.user.is_authenticated and  request.method in  ['GET', 'HEAD', 'OPTIONS']:
+                return True
+            
+            if request.user.is_authenticated and request.user.type == 'customer' and request.method in  ['POST']:
+                 return True
 
 
 class IsOwnerFromOfffer(BasePermission):

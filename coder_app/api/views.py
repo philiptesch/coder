@@ -3,11 +3,11 @@ from urllib import request
 from rest_framework import generics 
 from profile_app.models import Profile
 from auth_app.models import User
-from coder_app.models import offers, OfferDetails, Orders
+from coder_app.models import offers, OfferDetails, Orders, Review
 from rest_framework.views import APIView
-from .seralizers  import OfferSeralizer,OfferCreateSeralizer, OfferDetailSeralizer, OfferDetailRetrieveSeralizer, OfferDetailUpdateSeralizer, OrdersSerializer, OrderDetailSerializer, OrderCountSeralizer
+from .seralizers  import OfferSeralizer,OfferCreateSeralizer, OfferDetailSeralizer, OfferDetailRetrieveSeralizer, OfferDetailUpdateSeralizer, OrdersSerializer, OrderDetailSerializer, ReviewListSeralizer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .permission import IsBusinessUser, IsOwnerFromOfffer, IsCustomerUser, IsBusinessAndAdminUser
+from .permission import IsBusinessUser, IsOwnerFromOfffer, IsCustomerUser, IsBusinessAndAdminUser, IsCustomerUserForReviews
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
@@ -148,3 +148,46 @@ class OrderBusinessCountViewCompleted(APIView):
 
         count = Orders.objects.filter(business_user=user, status="completed").count()
         return Response({"order_count": count})
+
+
+class ReviewFilter(FilterSet):
+    business_user_id = NumberFilter(field_name='business_user', lookup_expr='exact')
+    reviewer_id = NumberFilter(field_name='reviewer', lookup_expr='exact')
+
+    class Meta:
+        model = Review
+        fields = ['business_user_id', 'reviewer_id' ]
+
+
+class ReviewListView(generics.ListCreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class = ReviewListSeralizer
+    permission_classes = [IsCustomerUserForReviews, IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = ReviewFilter
+    ordering_fields = ['updated_at', 'rating']
+
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        data = request.data
+        business_user = request.data.get('business_user')
+        allowedFields = { 'business_user', 'rating', 'description'  }
+        incomingField = set(data.keys())
+        invalid_fields = allowedFields - incomingField
+        if invalid_fields:
+            return Response(
+            {"detail": f"Unerlaubte Felder: {invalid_fields}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+        seralizer = ReviewListSeralizer(data=request.data)
+
+        if Review.objects.filter(reviewer=user, business_user=business_user ).exists():
+            return Response({'You have already reviewed this business.'}, status=status.HTTP_403_FORBIDDEN)
+
+
+        if seralizer.is_valid():
+            seralizer.save(reviewer=user)
+            return Response(seralizer.data, status=status.HTTP_201_CREATED)
+        return Response(seralizer.errors, status=status.HTTP_400_BAD_REQUEST)            
