@@ -67,3 +67,12 @@ class IsCustomerUser(BasePermission):
             return True
         if request.user.type == 'customer':
             return obj.customer_user == request.user
+        
+class isReviewer(BasePermission):
+
+    def has_permission(self, request, view):
+         if request.user.is_authenticated:
+            return True
+         
+    def has_object_permission(self, request, view, obj):
+         return obj.reviewer == request.user

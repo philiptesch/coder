@@ -5,9 +5,9 @@ from profile_app.models import Profile
 from auth_app.models import User
 from coder_app.models import offers, OfferDetails, Orders, Review
 from rest_framework.views import APIView
-from .seralizers  import OfferSeralizer,OfferCreateSeralizer, OfferDetailSeralizer, OfferDetailRetrieveSeralizer, OfferDetailUpdateSeralizer, OrdersSerializer, OrderDetailSerializer, ReviewListSeralizer
+from .seralizers  import OfferSeralizer,OfferCreateSeralizer, OfferDetailSeralizer, OfferDetailRetrieveSeralizer, OfferDetailUpdateSeralizer, OrdersSerializer, OrderDetailSerializer, ReviewListSeralizer, ReviewDetailSeralizer, BaseSerializer
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .permission import IsBusinessUser, IsOwnerFromOfffer, IsCustomerUser, IsBusinessAndAdminUser, IsCustomerUserForReviews
+from .permission import IsBusinessUser, IsOwnerFromOfffer, IsCustomerUser, IsBusinessAndAdminUser, IsCustomerUserForReviews, isReviewer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
@@ -174,10 +174,10 @@ class ReviewListView(generics.ListCreateAPIView):
         business_user = request.data.get('business_user')
         allowedFields = { 'business_user', 'rating', 'description'  }
         incomingField = set(data.keys())
-        invalid_fields = allowedFields - incomingField
+        invalid_fields = incomingField - allowedFields
         if invalid_fields:
             return Response(
-            {"detail": f"Unerlaubte Felder: {invalid_fields}"},
+            {"detail": f"Unauthorized fields: {invalid_fields}"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -188,6 +188,51 @@ class ReviewListView(generics.ListCreateAPIView):
 
 
         if seralizer.is_valid():
-            seralizer.save(reviewer=user)
+            seralizer.save()
             return Response(seralizer.data, status=status.HTTP_201_CREATED)
-        return Response(seralizer.errors, status=status.HTTP_400_BAD_REQUEST)            
+        return Response(seralizer.errors, status=status.HTTP_400_BAD_REQUEST)            #
+
+
+class ReviewDetailView(APIView):
+    permission_classes = [isReviewer, IsAuthenticated]
+
+
+    def patch(self, request, pk, *args, **kwargs):
+        review = get_object_or_404(Review, pk=pk)
+
+        allowedFields = {'rating','description'  }
+        incomingFields = set(request.data.keys())
+
+        invalid_fields = incomingFields - allowedFields
+        if invalid_fields:
+            return Response(
+            {"detail": f"Unauthorized fields: {invalid_fields}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+        if request.user != review.reviewer:
+            return Response({'detail': 'The user is not authorized to edit this review.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ReviewDetailSeralizer(review, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+    
+    def delete(self, request, pk, *args, **kwargs):
+        review = get_object_or_404(Review, pk=pk)
+        if request.user != review.reviewer:
+            return Response({'detail': 'Cannot delete this review.'}, status=403)
+
+        review.delete()
+        return Response({'detail': 'review deleted successfully.'}, status=204)
+
+
+class BaseInfoView(APIView):
+   
+  permission_classes = [AllowAny]
+
+  def get(self, request):
+        serializer = BaseSerializer(data={})
+        serializer.is_valid()
+        return Response(serializer.data)

@@ -280,3 +280,54 @@ class ReviewListSeralizer(serializers.ModelSerializer):
             
             review = Review.objects.create(reviewer=user, **validated_data)
             return review
+    
+
+
+class ReviewDetailSeralizer(serializers.ModelSerializer):
+
+
+    id = serializers.IntegerField(read_only=True)
+    rating = serializers.FloatField(source='rate')
+
+
+    class Meta:
+        model = Review
+        fields = [
+            'id', 'business_user', 'reviewer',
+            'rating', 'description', 'created_at',
+            'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'reviewer', 'business_user'
+            'created_at', 'updated_at']
+        
+    def update(self, instance, validated_data):
+        instance.description = validated_data.get('description', instance.description)
+        instance.rate = validated_data.get('rate', instance.rate)
+        
+
+        instance.save()
+        return instance
+
+
+class BaseSerializer(serializers.Serializer):
+    review_count = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    business_profile_count = serializers.SerializerMethodField()
+    offer_count = serializers.SerializerMethodField()
+
+    def get_review_count(self, obj):
+        return Review.objects.count()  # zählt alle Reviews
+
+    def get_average_rating(self, obj):
+        rating_average = Review.objects.aggregate(avg=Avg('rate'))['avg'] or 0
+        return round(rating_average, 1)
+
+    def get_business_profile_count(self, obj):
+       business_user =  User.objects.filter(type='business')
+       return business_user.count()
+
+    def get_offer_count(self, obj):
+        return offers.objects.count()
+
+
