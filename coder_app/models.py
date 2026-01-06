@@ -53,7 +53,7 @@ class Orders(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.in_progress)
 
     def __str__(self):
-        return f"Order {self.id} by {self.user.username}"
+        return f"Order {self.id} by {self.customer_user.username}"
     
 
 class Review(models.Model):
@@ -65,4 +65,4 @@ class Review(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Review for Order {self.order.id} - Rating: {self.rating}"
+        return f"Review for {self.business_user.username} - Rating: {self.rate}"
