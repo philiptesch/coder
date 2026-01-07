@@ -43,8 +43,18 @@ git clone https://github.com/philiptesch/coder
 cd coder
 ````
 
-###2️⃣ Create and activate a virtual environment
-
+### 2️⃣ Create and activate a virtual environment
+### Windows (PowerShell)
+```bash
+python -m venv env
+.\env\Scripts\Activate.ps1   
+```
+### Windows (CMD)
+```bash
+python -m venv env
+env\Scripts\activate.bat 
+```
+### macOS / Linux
 ```bash
 python3 -m venv env
 source env/bin/activate
