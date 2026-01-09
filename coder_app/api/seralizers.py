@@ -120,7 +120,7 @@ class OfferDetailSeralizer(serializers.ModelSerializer):
         return obj.details.aggregate(min_delivery_time=Min('delivery_time'))['min_delivery_time']
     class Meta:
         model = offers
-        fields = ['id', 'user', 'title', 'image' ,'description', 'created_at', 'uploaded_at', 'details', 'min_price', 'min_delivery_time',]
+        fields = ['id', 'user', 'title', 'image' ,'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time',]
 
 class OfferDetailRetrieveSeralizer(serializers.ModelSerializer):
 
