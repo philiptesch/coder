@@ -14,6 +14,8 @@ from rest_framework import generics
 from rest_framework.generics import RetrieveUpdateDestroyAPIView, RetrieveAPIView, ListCreateAPIView,ListAPIView
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
+from rest_framework import filters
+import django_filters
 from django_filters.rest_framework import FilterSet, NumberFilter, DjangoFilterBackend
 from rest_framework import filters
 from django.db.models import Min, Max
@@ -33,7 +35,7 @@ class OfferFilterSet(FilterSet):
 
 
 class OfferListView(ListCreateAPIView):
-    permission_classes = [IsBusinessUser, IsAuthenticated]
+    permission_classes = [IsBusinessUser]
     pagination_class = OfferListPaginatuion
     queryset = offers.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -144,10 +146,10 @@ class OrderBusinessCountViewCompleted(APIView):
         business_user = get_object_or_404(User, id=business_user_id, type='business')
         user = request.user
         if user.id != business_user.id:
-            return Response({"order_count": 0})
+            return Response({"completed_order_count": 0})
 
         count = Orders.objects.filter(business_user=user, status="completed").count()
-        return Response({"order_count": count})
+        return Response({"completed_order_count": count})
 
 
 class ReviewFilter(FilterSet):
@@ -170,27 +172,20 @@ class ReviewListView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         user = request.user
-        data = request.data
         business_user = request.data.get('business_user')
-        allowedFields = { 'business_user', 'rating', 'description'  }
-        incomingField = set(data.keys())
-        invalid_fields = incomingField - allowedFields
-        if invalid_fields:
-            return Response(
-            {"detail": f"Unauthorized fields: {invalid_fields}"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
         seralizer = ReviewListSeralizer(data=request.data)
+
+        if  user.type != 'customer':
+            return Response({'"only customer are allowed to do reviews.'}, status=status.HTTP_403_FORBIDDEN)
 
         if Review.objects.filter(reviewer=user, business_user=business_user ).exists():
             return Response({'You have already reviewed this business.'}, status=status.HTTP_403_FORBIDDEN)
-
-
+        
         if seralizer.is_valid():
-            seralizer.save()
-            return Response(seralizer.data, status=status.HTTP_201_CREATED)
-        return Response(seralizer.errors, status=status.HTTP_400_BAD_REQUEST)            #
+             seralizer.save(reviewer=user)
+             return Response(seralizer.data, status=status.HTTP_201_CREATED)
+        return Response(seralizer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class ReviewDetailView(APIView):

@@ -50,7 +50,7 @@ class OfferSeralizer(serializers.ModelSerializer):
 
     class Meta:
         model = offers
-        fields = ['id', 'user', 'title', 'image' ,'description', 'createad_at', 'uploaded_at', 'details', 'min_price', 'min_delivery_time', 'user_details']
+        fields = ['id', 'user', 'title', 'image' ,'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time', 'user_details']
 
 
 class OfferCreateSeralizer(serializers.ModelSerializer):
@@ -117,7 +117,7 @@ class OfferDetailSeralizer(serializers.ModelSerializer):
         return obj.details.aggregate(min_delivery_time=Min('delivery_time'))['min_delivery_time']
     class Meta:
         model = offers
-        fields = ['id', 'user', 'title', 'image' ,'description', 'createad_at', 'uploaded_at', 'details', 'min_price', 'min_delivery_time',]
+        fields = ['id', 'user', 'title', 'image' ,'description', 'created_at', 'uploaded_at', 'details', 'min_price', 'min_delivery_time',]
 
 class OfferDetailRetrieveSeralizer(serializers.ModelSerializer):
 
@@ -138,14 +138,10 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
         fields = ['id', 'image', 'description', 'title', 'details']
 
     def update(self, instance, validated_data):
-        print("UPDATE CALLED")
         instance.title = validated_data.get('title', instance.title)
         instance.save()
         existing_details = (OfferDetails.objects.filter(offer=instance))
-        print("OFFER DETAILS EXISTING:", existing_details)
-
         details_data = validated_data.get('details', [])
-        print("DETAILS DATA:", details_data)
         for i, detail_data in enumerate(details_data):                                                                               
             if i < len(existing_details):
                 print("UPDATING DETAIL:",  existing_details[i].id)
@@ -182,7 +178,7 @@ class OrdersSerializer(serializers.ModelSerializer):
             'id', 'customer_user', 'business_user',
             'title', 'revisions', 'delivery_time_in_days',
             'price', 'features', 'offer_type', 'status',
-            'created_at', 'uploaded_at', 'offer_detail_id'
+            'created_at', 'updated_at', 'offer_detail_id'
         ]
         read_only_fields = ['customer_user', 'business_user', 'status', 'created_at', 'uploaded_at']
 
@@ -218,7 +214,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'id', 'customer_user', 'business_user',
             'title', 'revisions', 'delivery_time_in_days',
             'price', 'features', 'offer_type', 'status',
-            'created_at', 'uploaded_at'
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'customer_user', 'business_user',
@@ -262,24 +258,8 @@ class ReviewListSeralizer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'reviewer',
-            'created_at', 'updated_at']
-
-    def create(self, validated_data):
-            user = self.context['request'].user
-            business_user = validated_data.get('business_user')
-            print(business_user)
-            print(user)
-            if user.type != 'customer':
-                raise serializers.ValidationError("Only customers are allowed to create reviews.")
-
-            if Review.objects.filter(reviewer=user,business_user=business_user).exists():
-                raise serializers.ValidationError("You have already reviewed this business.")
-            
-            if business_user.type != 'business':
-                raise serializers.ValidationError("You can only review business users.")
-            
-            review = Review.objects.create(reviewer=user, **validated_data)
-            return review
+            'created_at',
+            'updated_at']
     
 
 

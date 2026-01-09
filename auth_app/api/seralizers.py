@@ -42,6 +42,15 @@ class RegistrationSerializer(serializers.ModelSerializer):
             return data
         
     def create(self, validated_data):
+            usernameForProfile = validated_data['username'],
+            names = usernameForProfile[0].split(' ')
+            firstname = names[0]
+            if len(names) >= 2:
+                 lastname = names[1]
+            else: 
+                 lastname = ""
+
+
             user = User(
             username=validated_data['username'],
             email=validated_data['email'],
@@ -49,7 +58,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
             )
             user.set_password(validated_data['password']) 
             user.save()
-            Profile.objects.create(user=user)
+            Profile.objects.create(user=user, first_name=firstname, last_name=lastname  )
+            
             return user
     
 

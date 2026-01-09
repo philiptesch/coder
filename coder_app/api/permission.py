@@ -5,7 +5,11 @@ from rest_framework.views import APIView
 
 class IsBusinessUser(BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.type == 'business')
+            if request.method in SAFE_METHODS:
+                return True
+            
+            if request.user.is_authenticated and request.user.type == 'business' and request.method in  ['POST']: 
+                 return True
     
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:

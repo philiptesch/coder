@@ -10,8 +10,8 @@ class offers(models.Model):
     title = models.CharField(max_length=200)
     image = models.FileField(upload_to='offers/', default=True, null=True,)
     description = models.TextField()
-    createad_at = models.DateTimeField(auto_now_add=True)
-    uploaded_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.title
     
@@ -49,7 +49,7 @@ class Orders(models.Model):
     business_user = models.ForeignKey(User, related_name='business_orders', on_delete=models.CASCADE)
     offer_detail = models.ForeignKey(OfferDetails, related_name='details', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    uploaded_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.in_progress)
 
     def __str__(self):
