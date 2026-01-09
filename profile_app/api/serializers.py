@@ -76,7 +76,7 @@ class CustomerProfileSeralizer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['user', 'username', 'first_name', 'last_name', 'file', 'location', 'tel', 'description', 'working_hours', 'type']
+        fields = ['user', 'username', 'first_name', 'last_name', 'file', 'type']
 
     def get_user(self, obj):
         return obj.user.id

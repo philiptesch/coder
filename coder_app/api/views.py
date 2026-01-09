@@ -20,7 +20,7 @@ from django_filters.rest_framework import FilterSet, NumberFilter, DjangoFilterB
 from rest_framework import filters
 from django.db.models import Min, Max
 from rest_framework.exceptions import PermissionDenied, ValidationError
-class OfferListPaginatuion(PageNumberPagination):
+class OfferListPagination(PageNumberPagination):
     page_size = 5
     page_size_query_param = 'page_size'
     max_page_size = 100
@@ -36,7 +36,7 @@ class OfferFilterSet(FilterSet):
 
 class OfferListView(ListCreateAPIView):
     permission_classes = [IsBusinessUser]
-    pagination_class = OfferListPaginatuion
+    pagination_class = OfferListPagination
     queryset = offers.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = OfferFilterSet

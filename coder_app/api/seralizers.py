@@ -67,16 +67,19 @@ class OfferCreateSeralizer(serializers.ModelSerializer):
  
         details_data = validated_data.pop('details', [])
         user = self.context['request'].user
+        if len(details_data) < 3:
+             raise serializers.ValidationError(
+                        {"error": "a Offer must have at least three details  "}
+             )
         offer = offers.objects.create(**validated_data, user=user)
-        print("OFFER CREATED:", offer)
-    
+
         for detail_data in details_data:
             features = detail_data.get('features', [])
 
             for feature in features:
                 if isinstance(feature, int):
                     raise serializers.ValidationError(
-                        {"error": "Features dürfen keine Zahlen enthalten"}
+                        {"error": "features must not contain numbers"}
                     )
             OfferDetails.objects.create(offer=offer, **detail_data)
 
@@ -144,7 +147,6 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
         details_data = validated_data.get('details', [])
         for i, detail_data in enumerate(details_data):                                                                               
             if i < len(existing_details):
-                print("UPDATING DETAIL:",  existing_details[i].id)
                 detail_instance = existing_details[i]
                 detail_instance.revisions = detail_data.get('revisions', detail_instance.revisions)
                 detail_instance.title = detail_data.get('title', detail_instance.title)
@@ -220,7 +222,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'id', 'customer_user', 'business_user',
             'title', 'revisions', 'delivery_time_in_days',
             'price', 'features', 'offer_type',
-            'created_at', 'uploaded_at'
+            'created_at', 'updated_at'
         ]
 
     def validate(self, data):
