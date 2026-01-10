@@ -50,28 +50,28 @@ class OfferListView(ListCreateAPIView):
         return OfferSeralizer
 
     def get_queryset(self):
-        queryset= offers.objects.all()
+
 
         max_delivery_time = self.request.query_params.get('max_delivery_time')
         min_price = self.request.query_params.get('min_price')
 
-        queryset = queryset.annotate(max_delivery_time=Max('details__delivery_time'), min_price=Min('details__price'))
+        queryset = offers.objects.all()
 
         if max_delivery_time is not None:
             try:
                 max_delivery_time = int(max_delivery_time)
             except ValueError:
                 raise ValidationError("max_delivery_time must be an integer.")
-            queryset = queryset.filter(max_delivery_time__lte=max_delivery_time)
+            queryset = queryset.filter(details__delivery_time__lte=max_delivery_time)
 
         if min_price is not None:
             try:
                  min_price = float(min_price.replace(',', '.'))
             except ValueError:
                 raise ValidationError({"min_price": "Must be a number."})
-            queryset = queryset.filter(min_price__gte=min_price)
+            queryset = queryset.annotate(min_price=Min('details__price')).filter(min_price__gte=min_price)
 
-        return queryset
+        return queryset.distinct()
 
 class OfferDetailView(RetrieveUpdateDestroyAPIView):
     queryset = offers.objects.all()
@@ -92,7 +92,7 @@ class OfferDetailView(RetrieveUpdateDestroyAPIView):
 class OfferDetailRetrieveView(RetrieveAPIView):
     queryset = OfferDetails.objects.all()
     serializer_class = OfferDetailRetrieveSeralizer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
 
 
@@ -110,11 +110,17 @@ class OrderListCreateView(APIView):
     
 
     def post(self, request):
-        
         offer_detail_id = request.data.get('offer_detail_id')
+        try:
+            offer_detail_id = int(offer_detail_id)
+        except (ValueError, TypeError):
+            return Response({"error": "offer_detail_id must be an integer"},status=status.HTTP_400_BAD_REQUEST)
         if not OfferDetails.objects.filter(id=offer_detail_id).exists():
             return Response({"error": "The specified offer details could not be found."}, status=404)
-        
+        offer_detail = OfferDetails.objects.get(id=offer_detail_id)
+
+        if offer_detail.offer.user == request.user:
+            return Response({"error":"You cannot order your own offer."}, status=status.HTTP_403_FORBIDDEN)
         
         serializer = OrdersSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
@@ -126,6 +132,17 @@ class OrderDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Orders.objects.all()
     serializer_class = OrderDetailSerializer
     permission_classes = [IsBusinessAndAdminUser, IsAuthenticated]
+
+
+    def get_object(self):
+        pk = self.kwargs.get('pk')
+
+        obj = get_object_or_404(Orders,pk=pk)
+
+        self.check_object_permissions(self.request, obj)
+
+        return obj
+
 
 class OrderBusinessCountViewInProgress(APIView):
     permission_classes = [IsAuthenticated]
@@ -176,10 +193,10 @@ class ReviewListView(generics.ListCreateAPIView):
         seralizer = ReviewListSeralizer(data=request.data)
 
         if  user.type != 'customer':
-            return Response({'"only customer are allowed to do reviews.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response('only customer are allowed to do reviews.', status=status.HTTP_403_FORBIDDEN)
 
         if Review.objects.filter(reviewer=user, business_user=business_user ).exists():
-            return Response({'You have already reviewed this business.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response('You have already reviewed this business.', status=status.HTTP_400_BAD_REQUEST)
         
         if seralizer.is_valid():
              seralizer.save(reviewer=user)

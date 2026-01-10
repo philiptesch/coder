@@ -18,6 +18,7 @@ class DetailCreateSeralizer(serializers.ModelSerializer):
         model = OfferDetails
         fields = ['id', 'revisions', 'title', 'delivery_time_in_days', 'price', 'features', 'offer_type']
 
+
 class DetailOfferSeralizer(serializers.HyperlinkedModelSerializer):
 
     url = serializers.HyperlinkedIdentityField(view_name='offer-details', lookup_field='pk')
@@ -140,6 +141,7 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
         model = offers 
         fields = ['id', 'image', 'description', 'title', 'details']
 
+
     def update(self, instance, validated_data):
         instance.title = validated_data.get('title', instance.title)
         instance.save()
@@ -153,15 +155,14 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
                 detail_instance.delivery_time = detail_data.get('delivery_time', detail_instance.delivery_time)
                 detail_instance.price = detail_data.get('price', detail_instance.price)
                 detail_instance.features = detail_data.get('features', detail_instance.features)
-                detail_instance.offer_type = detail_data.get('offer_type', detail_instance.offer_type)
-                detail_instance.save()
+                detail_instance.offer_type = detail_data.get('offer_type')
+                if not detail_instance.offer_type: 
+                     raise serializers.ValidationError("Offer type is required.")
             else:
-                OfferDetails.objects.create(
-                offer=instance,
-                **detail_data
-                )
+                OfferDetails.objects.create(offer=instance,**detail_data)
         return instance
     
+
 
 
 class OrdersSerializer(serializers.ModelSerializer):
@@ -185,12 +186,10 @@ class OrdersSerializer(serializers.ModelSerializer):
         read_only_fields = ['customer_user', 'business_user', 'status', 'created_at', 'uploaded_at']
 
     def create(self, validated_data):
+
         offer_detail_id = validated_data.pop('offer_detail_id')
         offer_detail = OfferDetails.objects.get(id=offer_detail_id)
         user = self.context['request'].user
-
-        if offer_detail.offer.user == user:
-            raise serializers.ValidationError("You cannot order your own offer.")
 
         order = Orders.objects.create(
             customer_user=user,
