@@ -7,15 +7,57 @@ from profile_app.models import Profile
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-     class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'type', 'created_at']
+        """
+    Serializer for user profile information.
+
+    Purpose:
+        - Used to expose basic user information.
+        - Read-only serializer for displaying user data.
+
+    Fields:
+        - id: User ID
+        - username: Username of the user
+        - email: Email address
+        - type: Type of user (customer or business)
+        - created_at: Account creation timestamp
+    """
+class Meta:
+    model = User
+    fields = ['id', 'username', 'email', 'type', 'created_at']
      
 
 
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for user registration.
+
+    Purpose:
+        - Handles creating a new user account.
+        - Validates email uniqueness.
+        - Ensures passwords match.
+        - Assigns user type (customer or business).
+        - Automatically creates a related Profile object.
+
+    Fields:
+        - username: Desired username
+        - email: User email address
+        - password: Account password (write-only)
+        - repeated_password: Password confirmation (write-only)
+        - user_id: Read-only ID of the newly created user
+        - type: Type of user ('customer' or 'business', write-only)
+
+    Validation:
+        - validate_email: Ensures email is unique.
+        - validate_type: Ensures valid user type is selected.
+        - validate: Ensures password and repeated_password match.
+
+    Behavior:
+        - On creation, splits username into first_name and last_name for Profile.
+        - Sets the password securely using set_password.
+    """
+
     user_id = serializers.IntegerField(read_only=True) 
     repeated_password = serializers.CharField(write_only=True) 
     type = serializers.ChoiceField(choices=User.UserType.choices,  write_only=True)
@@ -64,6 +106,22 @@ class RegistrationSerializer(serializers.ModelSerializer):
     
 
 class LoginSerializer(serializers.Serializer):
+    """
+    Serializer for user login.
+
+    Purpose:
+        - Authenticates a user using username and password.
+        - Returns the authenticated user object if credentials are valid.
+
+    Fields:
+        - username: Username of the user
+        - password: Password (write-only)
+
+    Validation:
+        - Checks that the username exists.
+        - Authenticates credentials using Django's `authenticate`.
+        - Raises ValidationError if credentials are invalid.
+    """
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
 

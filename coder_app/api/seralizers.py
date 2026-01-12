@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from profile_app.models import Profile
 from auth_app.models import User
-from coder_app.models import offers, OfferDetails, Orders, Review
+from coder_app.models import Offers, OfferDetails, Orders, Review
 from django.db.models import Min, Max, Avg, Sum, Count
 from profile_app.api.serializers import UserDetailsSerializer
 
@@ -10,6 +10,15 @@ from profile_app.api.serializers import UserDetailsSerializer
 
 
 class DetailCreateSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for creating offer detail entries.
+
+    Purpose:
+        Used when creating or updating an offer with multiple detail options.
+
+    Field mapping:
+        delivery_time_in_days maps to delivery_time in the model.
+    """
 
     delivery_time_in_days = serializers.IntegerField(source='delivery_time')
     id = serializers.IntegerField(read_only=True)
@@ -20,6 +29,13 @@ class DetailCreateSeralizer(serializers.ModelSerializer):
 
 
 class DetailOfferSeralizer(serializers.HyperlinkedModelSerializer):
+    """
+    Lightweight serializer for offer details.
+
+    Purpose:
+        Used to expose only the ID and URL of offer details
+        when listing offers.
+    """
 
     url = serializers.HyperlinkedIdentityField(view_name='offer-details', lookup_field='pk')
 
@@ -30,7 +46,18 @@ class DetailOfferSeralizer(serializers.HyperlinkedModelSerializer):
 
 
 class OfferSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for listing offers.
 
+    Includes:
+        - Basic offer information
+        - Related offer details (URLs only)
+        - Minimum price and delivery time (aggregated)
+        - Business user details
+
+    Read-only:
+        All computed fields are derived from related data.
+    """
 
     id = serializers.IntegerField(read_only=True)
     user = serializers.SerializerMethodField()
@@ -50,17 +77,27 @@ class OfferSeralizer(serializers.ModelSerializer):
 
 
     class Meta:
-        model = offers
+        model = Offers
         fields = ['id', 'user', 'title', 'image' ,'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time', 'user_details']
 
 
 class OfferCreateSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for creating a new offer.
+
+    Behavior:
+        - Requires at least three offer detail entries.
+        - Automatically assigns the authenticated user as owner.
+
+    Validation:
+        - Ensures features do not contain numeric values.
+    """
 
     id = serializers.IntegerField(read_only=True)
     details = DetailCreateSeralizer(many=True)
 
     class Meta:
-        model = offers
+        model = Offers
         fields = ['id', 'title', 'image', 'description', 'details']
 
 
@@ -72,7 +109,7 @@ class OfferCreateSeralizer(serializers.ModelSerializer):
              raise serializers.ValidationError(
                         {"error": "a Offer must have at least three details  "}
              )
-        offer = offers.objects.create(**validated_data, user=user)
+        offer = Offers.objects.create(**validated_data, user=user)
 
         for detail_data in details_data:
             features = detail_data.get('features', [])
@@ -90,7 +127,13 @@ class OfferCreateSeralizer(serializers.ModelSerializer):
 
 
 class OfferDetailSeralizerHyperlinked(serializers.HyperlinkedModelSerializer):
-    
+    """
+    Hyperlinked serializer for offer details.
+
+    Purpose:
+        Used to reference individual offer detail endpoints
+        from an offer detail response.
+    """
 
     url = serializers.HyperlinkedIdentityField(view_name='offer-retrieve-details', lookup_field='pk')
     id = serializers.IntegerField(read_only=True)
@@ -103,6 +146,15 @@ class OfferDetailSeralizerHyperlinked(serializers.HyperlinkedModelSerializer):
 
 
 class OfferDetailSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for retrieving a single offer with full details.
+
+    Includes:
+        - All related offer detail links
+        - Aggregated minimum price
+        - Aggregated minimum delivery time
+        - Owner user ID
+    """
 
     details = OfferDetailSeralizerHyperlinked(many=True, read_only=True)
     min_price = serializers.SerializerMethodField()
@@ -120,25 +172,41 @@ class OfferDetailSeralizer(serializers.ModelSerializer):
     def get_min_delivery_time(self, obj):#
         return obj.details.aggregate(min_delivery_time=Min('delivery_time'))['min_delivery_time']
     class Meta:
-        model = offers
+        model = Offers
         fields = ['id', 'user', 'title', 'image' ,'description', 'created_at', 'updated_at', 'details', 'min_price', 'min_delivery_time',]
 
 class OfferDetailRetrieveSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for retrieving a single offer detail.
 
-
+    Purpose:
+        Used when accessing a specific offer detail directly.
+    """
     class Meta:
         model = OfferDetails
         fields = ['id', 'offer', 'revisions', 'title', 'delivery_time', 'price', 'features', 'offer_type']
 
 
 class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for updating an existing offer and its details.
+
+    Behavior:
+        - Updates the offer title.
+        - Updates existing detail entries or creates new ones.
+        - Offer type is mandatory for each detail.
+
+    Restrictions:
+        Image and description cannot be modified here.
+    """
+
     details = DetailCreateSeralizer(many=True)
     id = serializers.IntegerField(read_only=True)
     image = serializers.FileField(required=False, read_only=True)
     description = serializers.CharField(read_only=True)
 
     class Meta:
-        model = offers 
+        model = Offers 
         fields = ['id', 'image', 'description', 'title', 'details']
 
 
@@ -166,6 +234,14 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
 
 
 class OrdersSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating and listing orders.
+
+    Behavior:
+        - Accepts offer_detail_id as input.
+        - Automatically assigns customer and business users.
+        - Exposes read-only fields from related offer detail.
+    """
     id = serializers.IntegerField(read_only=True)
     title = serializers.CharField(source='offer_detail.title', read_only=True)
     revisions = serializers.IntegerField(source='offer_detail.revisions', read_only=True)
@@ -201,6 +277,14 @@ class OrdersSerializer(serializers.ModelSerializer):
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for retrieving and updating a single order.
+
+    Update rules:
+        - Only the 'status' field can be updated.
+        - Any other field update is rejected.
+    """
+    
     id = serializers.IntegerField(read_only=True)
     title = serializers.CharField(source='offer_detail.title', read_only=True)
     revisions = serializers.IntegerField(source='offer_detail.revisions', read_only=True)
@@ -245,6 +329,15 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         return instance
 
 class ReviewListSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for listing and creating reviews.
+
+    Field mapping:
+        rating maps to the 'rate' field in the model.
+
+    Restrictions:
+        Reviewer is always read-only and set automatically.
+    """
 
     id = serializers.IntegerField(read_only=True)
     rating = serializers.FloatField(source='rate')
@@ -265,7 +358,13 @@ class ReviewListSeralizer(serializers.ModelSerializer):
 
 
 class ReviewDetailSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for updating or retrieving a single review.
 
+    Update behavior:
+        - Allows updating rating and description only.
+        - Reviewer and business user cannot be changed.
+    """
 
     id = serializers.IntegerField(read_only=True)
     rating = serializers.FloatField(source='rate')
@@ -292,13 +391,22 @@ class ReviewDetailSeralizer(serializers.ModelSerializer):
 
 
 class BaseSerializer(serializers.Serializer):
+    """
+    Serializer providing aggregated platform statistics.
+
+    Returns:
+        - Total review count
+        - Average review rating
+        - Number of business profiles
+        - Total number of offers
+    """
     review_count = serializers.SerializerMethodField()
     average_rating = serializers.SerializerMethodField()
     business_profile_count = serializers.SerializerMethodField()
     offer_count = serializers.SerializerMethodField()
 
     def get_review_count(self, obj):
-        return Review.objects.count()  # zählt alle Reviews
+        return Review.objects.count()  
 
     def get_average_rating(self, obj):
         rating_average = Review.objects.aggregate(avg=Avg('rate'))['avg'] or 0
@@ -309,6 +417,6 @@ class BaseSerializer(serializers.Serializer):
        return business_user.count()
 
     def get_offer_count(self, obj):
-        return offers.objects.count()
+        return Offers.objects.count()
 
 

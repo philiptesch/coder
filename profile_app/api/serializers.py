@@ -4,6 +4,31 @@ from auth_app.models import User
 
 
 class DetailProfileSerializer(serializers.ModelSerializer):
+    """
+    Serializer for detailed user profile information.
+
+    Purpose:
+        - Exposes all profile fields including related user information.
+        - Handles updates to both the Profile and the related User object (e.g., email).
+
+    Fields:
+        - user: User ID
+        - username: Username of the user
+        - email: User's email (optional for update)
+        - type: User type (customer or business)
+        - created_at: Account creation timestamp
+        - first_name, last_name: Profile names
+        - file: Profile picture/file
+        - location: Profile location
+        - tel: Contact number
+        - description: Profile description
+        - working_hours: Profile working hours
+
+    Behavior:
+        - `get_user`: Returns the ID of the related User.
+        - `to_representation`: Ensures 'file' field is never None (empty string if missing).
+        - `update`: Allows updating both Profile fields and the related User's email.
+    """
 
     user = serializers.SerializerMethodField()
     email = serializers.EmailField(source='user.email', required=False)
@@ -49,6 +74,25 @@ class DetailProfileSerializer(serializers.ModelSerializer):
         return instance
     
 class BusinessProfileSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for business user profiles.
+
+    Purpose:
+        - Exposes profile fields relevant for business users.
+        - Read-only user fields: username, type.
+        - Handles empty file field by returning an empty string if not set.
+
+    Fields:
+        - user: User ID
+        - username: Username of the user
+        - type: User type (business)
+        - first_name, last_name: Profile names
+        - file: Profile picture/file
+        - location: Profile location
+        - tel: Contact number
+        - description: Profile description
+        - working_hours: Business working hours
+    """
 
     user = serializers.SerializerMethodField()
     type = serializers.CharField(source='user.type', read_only=True)
@@ -69,6 +113,21 @@ class BusinessProfileSeralizer(serializers.ModelSerializer):
 
 
 class CustomerProfileSeralizer(serializers.ModelSerializer):
+    """
+    Serializer for customer user profiles.
+
+    Purpose:
+        - Exposes profile fields relevant for customer users.
+        - Read-only user fields: username, type.
+        - Handles empty file field by returning an empty string if not set.
+
+    Fields:
+        - user: User ID
+        - username: Username of the user
+        - type: User type (customer)
+        - first_name, last_name: Profile names
+        - file: Profile picture/file
+    """
 
     user = serializers.SerializerMethodField()
     type = serializers.CharField(source='user.type', read_only=True)
@@ -89,6 +148,18 @@ class CustomerProfileSeralizer(serializers.ModelSerializer):
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for basic user details linked to a profile.
+
+    Purpose:
+        - Provides minimal user information for nested serialization.
+        - Typically used inside other serializers (e.g., OfferSeralizer) to show user info.
+
+    Fields:
+        - first_name: User first name
+        - last_name: User last name
+        - username: Username
+    """
 
     username = serializers.CharField(source='user.username', read_only=True)
 

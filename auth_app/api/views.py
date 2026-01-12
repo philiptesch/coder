@@ -5,6 +5,30 @@ from rest_framework import generics, status
 from auth_app.api.seralizers import RegistrationSerializer, LoginSerializer
 
 class RegistrationView(generics.CreateAPIView):
+    """
+    API endpoint for user registration.
+
+    Purpose:
+        - Allows new users to register an account.
+        - Uses the `RegistrationSerializer` for input validation.
+        - Automatically generates an authentication token for the new user.
+
+    Behavior:
+        - Validates the request data using the serializer.
+        - Saves the user to the database.
+        - Creates or retrieves a token for the user.
+        - Returns user details along with the token in the response.
+
+    Response Fields:
+        - user_id: ID of the newly created user
+        - username: Username
+        - email: User email
+        - type: User type (customer or business)
+        - token: Authentication token for the user
+
+    HTTP Methods:
+        - POST: Create a new user and return their info with token.
+    """
     serializer_class = RegistrationSerializer
 
     def create(self, request, *args, **kwargs):
@@ -22,6 +46,29 @@ class RegistrationView(generics.CreateAPIView):
     
 
 class LoginView(ObtainAuthToken):
+    """
+    API endpoint for user login.
+
+    Purpose:
+        - Authenticates an existing user using username and password.
+        - Uses the `LoginSerializer` for validation.
+        - Returns an authentication token upon successful login.
+
+    Behavior:
+        - Validates the request data using the serializer.
+        - Authenticates the user.
+        - Creates or retrieves a token for the user.
+        - Returns user details along with the token in the response.
+
+    Response Fields:
+        - user_id: ID of the authenticated user
+        - username: Username
+        - email: User email
+        - token: Authentication token for the user
+
+    HTTP Methods:
+        - POST: Authenticate the user and return their token.
+    """
     serializer_class = LoginSerializer
    
     def post(self, request, *args, **kwargs):
