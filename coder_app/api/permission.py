@@ -45,7 +45,7 @@ class IsBusinessAndAdminUser(BasePermission):
         Typically used for endpoints where business users or admins can update or delete orders.
     """
     def has_permission(self, request, view):
-            return bool(request.user and request.user.is_authenticated and request.user.type == 'business')
+            return bool(request.user and request.user.is_authenticated)
     
 
     def has_object_permission(self, request, view, obj):

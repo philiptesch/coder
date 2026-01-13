@@ -182,9 +182,10 @@ class OfferDetailRetrieveSeralizer(serializers.ModelSerializer):
     Purpose:
         Used when accessing a specific offer detail directly.
     """
+    delivery_time_in_days = serializers.IntegerField(source='delivery_time')
     class Meta:
         model = OfferDetails
-        fields = ['id', 'offer', 'revisions', 'title', 'delivery_time', 'price', 'features', 'offer_type']
+        fields = ['id', 'offer', 'revisions', 'title', 'delivery_time_in_days', 'price', 'features', 'offer_type']
 
 
 class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
@@ -199,36 +200,40 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
     Restrictions:
         Image and description cannot be modified here.
     """
-
     details = DetailCreateSeralizer(many=True)
     id = serializers.IntegerField(read_only=True)
-    image = serializers.FileField(required=False, read_only=True)
+    image = serializers.FileField(read_only=True)
     description = serializers.CharField(read_only=True)
 
     class Meta:
-        model = Offers 
+        model = Offers
         fields = ['id', 'image', 'description', 'title', 'details']
 
 
     def update(self, instance, validated_data):
         instance.title = validated_data.get('title', instance.title)
         instance.save()
-        existing_details = (OfferDetails.objects.filter(offer=instance))
+        existing_details = list(OfferDetails.objects.filter(offer=instance))
         details_data = validated_data.get('details', [])
-        for i, detail_data in enumerate(details_data):                                                                               
+        for i, detail_data in enumerate(details_data):
+            offer_type = detail_data.get('offer_type')
+            if not offer_type:
+                raise serializers.ValidationError("Offer type is required.")
             if i < len(existing_details):
                 detail_instance = existing_details[i]
-                detail_instance.revisions = detail_data.get('revisions', detail_instance.revisions)
                 detail_instance.title = detail_data.get('title', detail_instance.title)
-                detail_instance.delivery_time = detail_data.get('delivery_time', detail_instance.delivery_time)
+                detail_instance.revisions = detail_data.get('revisions', detail_instance.revisions)
+                detail_instance.delivery_time = detail_data.get('delivery_time_in_days', detail_instance.delivery_time)
                 detail_instance.price = detail_data.get('price', detail_instance.price)
                 detail_instance.features = detail_data.get('features', detail_instance.features)
-                detail_instance.offer_type = detail_data.get('offer_type')
-                if not detail_instance.offer_type: 
-                     raise serializers.ValidationError("Offer type is required.")
+                detail_instance.offer_type = offer_type
+                detail_instance.save()
             else:
-                OfferDetails.objects.create(offer=instance,**detail_data)
+                OfferDetails.objects.create(offer=instance,title=detail_data.get('title'),revisions=detail_data.get('revisions', 0),delivery_time=detail_data.get('delivery_time_in_days', 0),price=detail_data.get('price', 0),features=detail_data.get('features', []),offer_type=offer_type)
+
         return instance
+
+
     
 
 

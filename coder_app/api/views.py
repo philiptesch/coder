@@ -354,10 +354,10 @@ class ReviewListView(generics.ListCreateAPIView):
         business_user = request.data.get('business_user')
 
         if user.type != 'customer':
-            return Response({'only customer are allowed to do reviews.'},status=status.HTTP_403_FORBIDDEN)
+            return Response({'detail': 'Only customers are allowed to do reviews.'},status=status.HTTP_403_FORBIDDEN)
 
         if Review.objects.filter(reviewer=user,business_user=business_user).exists():
-            return Response({'You have already reviewed this business.'},status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'You have already reviewed this business.'},status=status.HTTP_400_BAD_REQUEST)
 
         seralizer = ReviewListSeralizer(data=request.data)
 
