@@ -185,9 +185,7 @@ class OfferDetailRetrieveSeralizer(serializers.ModelSerializer):
     delivery_time_in_days = serializers.IntegerField(source='delivery_time')
     class Meta:
         model = OfferDetails
-        fields = ['id', 'offer', 'revisions', 'title', 'delivery_time_in_days', 'price', 'features', 'offer_type']
-
-
+        fields = ['id', 'title', 'revisions',  'delivery_time_in_days', 'price', 'features', 'offer_type']
 class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
     """
     Serializer for updating an existing offer and its details.
@@ -223,7 +221,7 @@ class OfferDetailUpdateSeralizer(serializers.ModelSerializer):
                 detail_instance = existing_details[i]
                 detail_instance.title = detail_data.get('title', detail_instance.title)
                 detail_instance.revisions = detail_data.get('revisions', detail_instance.revisions)
-                detail_instance.delivery_time = detail_data.get('delivery_time_in_days', detail_instance.delivery_time)
+                detail_instance.delivery_time = detail_data.get('delivery_time', detail_instance.delivery_time)
                 detail_instance.price = detail_data.get('price', detail_instance.price)
                 detail_instance.features = detail_data.get('features', detail_instance.features)
                 detail_instance.offer_type = offer_type
