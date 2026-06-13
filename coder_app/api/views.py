@@ -113,7 +113,7 @@ class OfferListView(ListCreateAPIView):
         queryset = Offers.objects.all()
 
 
-        if max_delivery_time is not None:
+        if max_delivery_time:
             try:
                 max_delivery_time = int(max_delivery_time)
             except ValueError:

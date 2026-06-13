@@ -96,6 +96,13 @@ class OfferCreateSeralizer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     details = DetailCreateSeralizer(many=True)
 
+    def validate_image(self, value):
+        if isinstance(value, bool):
+            return None
+            return value
+
+
+
     class Meta:
         model = Offers
         fields = ['id', 'title', 'image', 'description', 'details']

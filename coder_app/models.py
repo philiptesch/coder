@@ -21,7 +21,7 @@ class Offers(models.Model):
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
-    image = models.FileField(upload_to='Offers/', default=True, null=True,)
+    image = models.FileField(upload_to='Offers/', default=None, null=True, blank=True)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
